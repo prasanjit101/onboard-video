@@ -4,5 +4,7 @@
   "initialVersions": {
     "onboard-video": "0.1.0"
   },
-  "changesets": []
+  "changesets": [
+    "draggable-floating-mode"
+  ]
 }

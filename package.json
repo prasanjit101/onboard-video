@@ -1,6 +1,6 @@
 {
   "name": "onboard-video",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.0",
   "description": "Tiny React library for embedding onboarding videos from Cloudinary, YouTube, or plain MP4 behind one consistent API.",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
