@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "onboard-video": "0.1.0"
+  },
+  "changesets": []
+}
