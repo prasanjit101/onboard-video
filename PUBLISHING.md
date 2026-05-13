@@ -2,6 +2,8 @@
 
 Step-by-step guide for getting this package on npm and making it available to consumers worldwide. Read all of it once before you publish the first time — most of these steps you do exactly once.
 
+> **Day-to-day flow lives elsewhere.** Versioning, changelog generation, and publishing are managed by [Changesets](https://github.com/changesets/changesets) and a GitHub Action — see sections 3–5 below for what that looks like in practice. If you're using Claude Code in this repo, the `.claude/skills/release/SKILL.md` skill walks the model through the workflow end-to-end. This file is mostly the one-time account-setup background.
+
 ---
 
 ## 1. One-time setup
@@ -98,14 +100,14 @@ bun run build
 
 All four must pass. The `prepublishOnly` script in `package.json` runs `clean + test + build` automatically when you publish, but running them manually first means you see failures *before* npm has marked a version.
 
-### 2.2 Verify the bundle sizes (spec requires <4 KB / <3 KB gzipped)
+### 2.2 Verify the bundle sizes (spec requires <6 KB / <3 KB gzipped)
 
 ```sh
 bun run size
 ```
 
 The spec budgets are:
-- Core ESM bundle: **< 4 KB gzipped**
+- Core ESM bundle: **< 6 KB gzipped** (includes the optional draggable/floating mode)
 - YouTube chunk: **< 3 KB gzipped** (excluding `lite-youtube-embed` itself)
 
 If you're over, audit `dist/esm/index.js` for unexpected code being pulled in by imports.
@@ -140,66 +142,87 @@ Then write a tiny `index.tsx` that imports and renders the component. If `bun bu
 
 ---
 
-## 3. Versioning
+## 3. Versioning and the changelog (via Changesets)
 
-Follow [semver](https://semver.org/):
+This project uses [Changesets](https://github.com/changesets/changesets) for versioning. The model:
+
+> Every PR that affects consumers drops a small markdown file into `.changeset/` describing the change and the bump type (`patch` / `minor` / `major`). Those files queue up. When you "cut a release", Changesets consumes the queue: it bumps `package.json`, writes/updates `CHANGELOG.md`, deletes the consumed files, and publishes to npm.
+
+### 3.1 Record a change (per PR)
+
+After making a user-visible change, in the PR branch:
+
+```sh
+bun run changeset
+```
+
+You'll be prompted for the bump type and a summary. The summary becomes the `CHANGELOG.md` entry verbatim — write it for consumers reading release notes, not as a commit log. Commit the generated `.changeset/<random-name>.md` alongside the code.
+
+Semver guide:
 
 - **Patch** (`0.1.0 → 0.1.1`) — bug fixes, no API change
 - **Minor** (`0.1.0 → 0.2.0`) — backwards-compatible new features
-- **Major** (`0.1.0 → 1.0.0`) — breaking API change
+- **Major** (`0.1.0 → 1.0.0`) — breaking API change (lead the summary with `BREAKING:` and include a one-line migration hint)
 
-Bump the version with npm itself, which also creates a git tag:
+Skip the changeset for docs-only, test-only, internal-refactor, or CI changes.
 
-```sh
-npm version patch        # 0.1.0 → 0.1.1
-npm version minor        # 0.1.0 → 0.2.0
-npm version major        # 0.1.0 → 1.0.0
-```
-
-Push the tag:
+### 3.2 Pre-release versions
 
 ```sh
-git push --follow-tags
+bunx changeset pre enter beta    # enter pre-release mode tagged "beta"
+bun run changeset                # add changesets as usual
+bun run version                  # produces e.g. 0.2.0-beta.0
+bun run release                  # publishes under the "beta" dist-tag
+bunx changeset pre exit          # leave pre-release mode when done
 ```
 
-### Pre-release versions
+Consumers opt in with `npm install onboard-video@beta`. The `latest` tag is unaffected.
 
-For betas / release candidates:
+### 3.3 Inspect what's queued
 
 ```sh
-npm version prerelease --preid=beta    # 0.1.0 → 0.1.1-beta.0
-npm publish --tag beta
+bunx changeset status --verbose
 ```
 
-Consumers then opt in with `npm install onboard-video@beta`. The default `latest` tag is unaffected.
+Prints each pending changeset, the bump type, and the projected next version.
 
 ---
 
 ## 4. Publishing
 
-### 4.1 First publish
+### 4.1 First publish (one-time bootstrap)
+
+The first publish has to happen by hand, because Changesets needs a starting point on the registry:
 
 ```sh
+bun run build
 npm publish
 ```
 
-(For a scoped package without `publishConfig`: `npm publish --access public`.)
-
-You'll be prompted for your 2FA code if you enabled it. After ~20 seconds the package is live.
-
-Verify:
+You'll be prompted for your 2FA code if you enabled it. After ~20 seconds the package is live. Verify:
 
 ```sh
 npm view onboard-video
 ```
 
-You should see the version, the README, and the dist files listed.
+From here on, all subsequent versions are cut by Changesets — either via the GitHub Action (recommended) or manually.
 
-### 4.2 Subsequent publishes
+### 4.2 Subsequent publishes via CI (recommended)
+
+When `.changeset/*.md` files exist on `main`, the `Release` GitHub Action opens (or updates) a PR titled **"release: version packages"** that bumps `package.json`, writes the changelog, and deletes the consumed changeset files. **Merge that PR** to publish — the workflow detects the merged version bump and runs `bun run release` (which calls `changeset publish` → `npm publish` → also pushes a `v<x.y.z>` git tag).
+
+See section 5 for setup.
+
+### 4.3 Subsequent publishes manually (fallback)
+
+Use only when CI is unavailable or you need a hotfix out *right now*.
 
 ```sh
-npm version patch      # or minor / major
-npm publish
+bun run version             # consumes .changeset/*.md → bumps package.json + CHANGELOG.md
+git diff                    # sanity-check the version bump and changelog
+git add CHANGELOG.md package.json .changeset
+git commit -m "release: v$(node -p "require('./package.json').version")"
+bun run release             # prepublishOnly runs clean+test+build, then npm publish
 git push --follow-tags
 ```
 
@@ -207,51 +230,22 @@ You **cannot** republish the same version number — even if you `npm unpublish`
 
 ---
 
-## 5. Automated publishing via GitHub Actions (recommended)
+## 5. Automated publishing via GitHub Actions
 
-Manual publishing works fine for v1, but automating it from a git tag prevents "I forgot to run the tests" mistakes.
+`.github/workflows/release.yml` is already set up and uses [`changesets/action@v1`](https://github.com/changesets/action). On every push to `main` it does one of two things:
 
-Create `.github/workflows/publish.yml`:
+- **If queued changesets exist** → opens / updates a PR called **"release: version packages"** containing the version bump and changelog updates.
+- **If `package.json` is ahead of npm** (i.e. someone merged the Version PR) → runs `bun run release`, which publishes to npm and pushes the git tag.
 
-```yaml
-name: Publish to npm
+You don't have to invoke it — pushing to `main` (or merging the Version PR) is the trigger.
 
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: read
-  id-token: write       # required for npm provenance (see below)
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
-      - run: bun install --frozen-lockfile
-      - run: bun test
-      - run: bun run build
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-Then:
+### 5.1 One-time setup
 
 1. Generate an **automation token** on npmjs.com (Account → Access Tokens → Generate New Token → "Automation"). Automation tokens bypass 2FA, so guard them.
 2. Add it to your repo as a secret named `NPM_TOKEN` (Settings → Secrets and variables → Actions → New repository secret).
-3. To release, just run `npm version patch && git push --follow-tags`. The workflow fires on the tag.
+3. Make sure Settings → Actions → General → "Workflow permissions" allows the workflow to "create and approve pull requests" (needed so the action can open the Version PR).
 
-**`--provenance`** signs the published package with cryptographic proof it came from this GitHub repo at this commit. Consumers can verify with `npm audit signatures`. Strongly recommended.
+The workflow already has the right permissions block (`contents: write`, `pull-requests: write`, `id-token: write`) and passes `NPM_CONFIG_PROVENANCE=true` so published tarballs are signed with cryptographic provenance from this commit. Consumers can verify with `npm audit signatures`.
 
 ---
 
@@ -279,9 +273,9 @@ updates:
     schedule: { interval: "weekly" }
 ```
 
-### 6.3 Add a changelog
+### 6.3 Changelog
 
-Even a hand-written `CHANGELOG.md` (Keep-a-Changelog format) helps consumers know what changed between versions. Or use `changesets` if you want to automate it.
+`CHANGELOG.md` is generated automatically by Changesets when `bun run version` runs (locally or in the Version PR). Don't edit it by hand — edit the source `.changeset/*.md` and re-run `version`.
 
 ---
 
@@ -312,21 +306,30 @@ The package stays installable but consumers see the message in their install log
 ## 8. Quick reference
 
 ```sh
-# First time:
+# First time only:
 npm login
 npm whoami
+bun run build && npm publish     # bootstrap the package on the registry
 
-# Each release:
-bun install
-bun test
-bun run build
-npm version patch         # or minor / major
-npm publish               # --access public if scoped
+# Per PR (records what changed for the next release):
+bun run changeset                # interactive: pick bump type + summary
+git add .changeset/*.md          # commit alongside the code change
+
+# Inspecting:
+bunx changeset status --verbose  # what's queued for the next release
+npm pack --dry-run               # what would actually be uploaded
+npm view onboard-video           # what's currently on npm
+
+# Releasing via CI (recommended):
+# 1. Push the PR with the changeset to main.
+# 2. The "Release" workflow opens a "release: version packages" PR.
+# 3. Merge it. The workflow publishes to npm and pushes the v<x.y.z> tag.
+
+# Releasing manually (fallback):
+bun run version                  # consume changesets, bump version, write CHANGELOG.md
+git commit -am "release: v$(node -p "require('./package.json').version")"
+bun run release                  # publish to npm (prepublishOnly runs clean+test+build)
 git push --follow-tags
-
-# Inspect:
-npm pack --dry-run
-npm view onboard-video
 ```
 
-That's it. The package will be installable globally as `npm install onboard-video` (or whatever name you picked) within minutes of `npm publish` completing.
+That's it. The package will be installable globally as `npm install onboard-video` (or whatever name you picked) within minutes of publish completing.

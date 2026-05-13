@@ -6,7 +6,7 @@ A lightweight React library for embedding and controlling onboarding videos in S
 
 ## 1. Goals
 
-- **Tiny.** Under 4KB gzipped for the core path (component + hook + MP4 + Cloudinary). YouTube provider loads on demand.
+- **Tiny.** Under 6KB gzipped for the core path (component + hook + MP4 + Cloudinary + draggable/floating mode). YouTube provider loads on demand.
 - **Fast first paint.** No video provider JS in the critical path. YouTube uses `lite-youtube-embed`, which only loads the heavy iframe after click. Cloudinary uses plain `<video>` with delivery URLs (no Cloudinary SDK).
 - **Onboarding-shaped API.** First-class events for `onEnded`, `onSkip`, `allowSkipAfter`, and a separate opt-in hook for "has this user watched this video before."
 - **Provider-agnostic.** Adding Vimeo or another provider later is a single new file implementing one interface.
@@ -67,10 +67,24 @@ type VideoSource =
   className={string}
   style={CSSProperties}
   aspectRatio={'16/9' | '4/3' | '1/1' | string}  // default '16/9'
+  draggable={boolean | DraggableConfig}     // floating PiP-style frame with snap-to-corner
 />
 ```
 
 Renders a container with the video, a click-to-play overlay using the poster, and (if `allowSkipAfter` is set) a skip button that fades in after the threshold. No external styling dependency — minimal scoped CSS injected once via a `<style>` tag with a unique class prefix (`ov-`).
+
+`DraggableConfig`:
+
+```ts
+type FloatingCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+
+interface DraggableConfig {
+  initialCorner?: FloatingCorner    // default 'bottom-right'
+  width?: number | string           // overrides the built-in 320px width
+  margin?: number                   // inset from viewport edges; default 20
+  onSnap?: (corner: FloatingCorner) => void
+}
+```
 
 ### 3.3 `useOnboardingVideo()` — headless hook
 
@@ -240,6 +254,33 @@ idle → loading → ready → playing ⇄ paused → ended
 - `injectStyles()` is guarded by `typeof document !== 'undefined'`.
 - Importing the package on the server must not throw. Test this explicitly.
 
+### 5.7 Draggable / floating mode
+
+When `draggable` is set on `<OnboardingVideo />` the video renders as a
+fixed-position floating frame instead of inline:
+
+- The root container becomes `position: fixed` with a default `320px` width
+  (capped at `90vw`), rounded corners, and a soft shadow.
+- A thin top handle (28px tall) is rendered with a grip indicator. Pointer
+  events are wired on the handle only — the video body, play overlay, skip
+  button, and error retry remain clickable.
+- Pointer Events with pointer capture (`setPointerCapture`) drive the drag, so
+  mouse, touch, and stylus behave identically and the gesture survives the
+  pointer leaving the handle's box.
+- The position is applied via `transform: translate3d(x, y, 0)` (GPU-friendly,
+  no layout). During drag, transitions are disabled (`data-dragging="true"`);
+  on release, the frame animates to the nearest corner with a
+  `cubic-bezier(0.22, 1, 0.36, 1)` ease over ~320ms.
+- "Nearest corner" is computed from the squared distance between the frame's
+  top-left and each corner anchor (`cornerOffset`). The four corner anchors
+  are `margin` in from each viewport edge.
+- On `window.resize` the frame re-snaps to its current corner so it never
+  strands off-screen on viewport shrink or device rotation.
+- `onSnap(corner)` fires on each settle, useful for syncing UI state.
+
+State outside the floating mode is untouched: the same hook, the same state
+machine, the same provider plumbing. Floating is purely a layout/UX layer.
+
 ## 6. Build & tooling
 
 - **Bun** for everything: package manager, test runner, bundler.
@@ -283,7 +324,7 @@ idle → loading → ready → playing ⇄ paused → ended
 2. Same with `{ provider: 'youtube', videoId: '...' }` — no YouTube JS loads on initial page render; the poster image renders immediately; clicking play loads the iframe and the rest of the library.
 3. Same with `{ provider: 'mp4', src: '...' }` — works against a self-hosted MP4.
 4. Headless hook example in the README renders a fully custom UI.
-5. Built bundle measured: core path under 4KB gzipped, YouTube provider chunk under 3KB gzipped (excluding `lite-youtube-embed` itself).
+5. Built bundle measured: core path under 6KB gzipped (component + hook + MP4 + Cloudinary + draggable/floating), YouTube provider chunk under 3KB gzipped (excluding `lite-youtube-embed` itself).
 6. `useVideoWatchState('my-video')` returns `hasWatched: false` initially, `true` after `markWatched()`, persists across page reload.
 7. `bun test` passes; SSR test passes.
 8. Importing the package in a Next.js server component does not throw.
@@ -298,7 +339,8 @@ idle → loading → ready → playing ⇄ paused → ended
 
 - Vimeo, Wistia, Mux providers.
 - Captions/subtitles UI.
-- Picture-in-picture.
+- Native browser Picture-in-Picture API (the `draggable` prop covers the
+  PiP-style UX without depending on the per-browser native PiP feature).
 - Adaptive bitrate (HLS/DASH).
 - Server-side analytics integration.
 - A `<VideoFlow />` orchestration component.

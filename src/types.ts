@@ -32,6 +32,35 @@ export type VideoState =
 /** Aspect-ratio prop accepts the common shortcuts or any valid CSS aspect-ratio string. */
 export type AspectRatio = '16/9' | '4/3' | '1/1' | (string & {})
 
+/** One of the four viewport corners the floating frame can snap to. */
+export type FloatingCorner =
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
+
+/**
+ * Configuration for the draggable/floating mode of `<OnboardingVideo />`.
+ * Passing `draggable={true}` opts in with sensible defaults; pass an object to
+ * customize. When draggable is on, the video renders as a fixed-position
+ * frame, can be dragged by its top handle, and animates to the nearest corner
+ * on release.
+ */
+export interface DraggableConfig {
+  /** Corner the frame snaps to on first mount. Default `'bottom-right'`. */
+  initialCorner?: FloatingCorner
+  /**
+   * Width of the floating frame. Number → pixels. String → any valid CSS
+   * width. When omitted, the built-in `.ov-root[data-floating="true"]` rule
+   * uses `320px` (capped at `90vw`).
+   */
+  width?: number | string
+  /** Inset from the viewport edges when snapped. Default `20` (px). */
+  margin?: number
+  /** Fires after each snap so consumers can sync UI to the active corner. */
+  onSnap?: (corner: FloatingCorner) => void
+}
+
 /** Props accepted by the opinionated `<OnboardingVideo />` component. */
 export interface OnboardingVideoProps {
   source: VideoSource
@@ -58,6 +87,16 @@ export interface OnboardingVideoProps {
   className?: string
   style?: CSSProperties
   aspectRatio?: AspectRatio
+  /**
+   * Enable a draggable, floating "picture-in-picture" style frame. The video
+   * renders fixed-positioned, can be dragged from the top handle, and snaps
+   * (with an animated transition) to the nearest viewport corner on release.
+   *
+   *  - `false | undefined` → inline (default).
+   *  - `true` → floating with sensible defaults (bottom-right, 320 px wide).
+   *  - `DraggableConfig` → customize initial corner, width, margin, and snap callback.
+   */
+  draggable?: boolean | DraggableConfig
 }
 
 /** Options consumed by the headless `useOnboardingVideo` hook. */

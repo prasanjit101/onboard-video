@@ -113,6 +113,52 @@ const CSS = `
   font-weight: 500;
   cursor: pointer;
 }
+
+/* Floating / draggable mode --------------------------------------------- */
+.ov-root[data-floating="true"] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  max-width: 90vw;
+  border-radius: 12px;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.18);
+  z-index: 2147483000;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  touch-action: none;
+}
+.ov-root[data-floating="true"][data-dragging="true"] {
+  transition: none;
+}
+.ov-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  z-index: 6;
+}
+.ov-root[data-floating="true"][data-dragging="true"] .ov-drag-handle {
+  cursor: grabbing;
+}
+.ov-drag-grip {
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
 `
 
 let injected = false
