@@ -1,0 +1,65 @@
+{
+  "name": "onboard-video",
+  "version": "0.1.0",
+  "description": "Tiny React library for embedding onboarding videos from Cloudinary, YouTube, or plain MP4 behind one consistent API.",
+  "type": "module",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun run build:esm && bun run build:cjs && bun run build:types",
+    "build:esm": "bun build src/index.ts --outdir dist/esm --target browser --format esm --splitting --minify --external react --external react-dom --external react/jsx-runtime --external lite-youtube-embed",
+    "build:cjs": "bun build src/index.ts --outfile dist/cjs/index.cjs --target browser --format cjs --minify --external react --external react-dom --external react/jsx-runtime --external lite-youtube-embed",
+    "build:types": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "size": "bun run build && bun run scripts/measure-size.ts",
+    "prepublishOnly": "bun run clean && bun run test && bun run build"
+  },
+  "keywords": [
+    "react",
+    "video",
+    "onboarding",
+    "cloudinary",
+    "youtube",
+    "mp4",
+    "embed",
+    "player"
+  ],
+  "author": "Prasanjit Dutta",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prasanjit101/onboard-video"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "optionalDependencies": {
+    "lite-youtube-embed": "^0.3.0"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^15.7.4",
+    "@types/bun": "^1.1.13",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "happy-dom": "^15.7.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3"
+  }
+}

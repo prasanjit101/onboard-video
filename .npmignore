@@ -1,0 +1,17 @@
+src/
+tests/
+scripts/
+examples/
+node_modules/
+.github/
+*.test.ts
+*.test.tsx
+tsconfig.json
+tsconfig.build.json
+bunfig.toml
+.gitignore
+.DS_Store
+spec.md
+AGENTS.md
+CLAUDE.md
+PUBLISHING.md
