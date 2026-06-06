@@ -159,6 +159,59 @@ const CSS = `
   background: rgba(255, 255, 255, 0.85);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
+.ov-control-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 200ms ease, height 150ms ease;
+  z-index: 5;
+}
+.ov-root:hover .ov-control-bar {
+  opacity: 1;
+}
+.ov-control-bar:hover {
+  height: 10px;
+}
+.ov-control-progress {
+  height: 100%;
+  background: #ffffff;
+  width: 0;
+  transition: width 100ms linear;
+}
+.ov-play-pause-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 200ms ease, transform 150ms ease;
+  pointer-events: none;
+  z-index: 5;
+}
+.ov-root:hover .ov-play-pause-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ov-play-pause-btn:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: rgba(0, 0, 0, 0.85);
+}
 `
 
 let injected = false

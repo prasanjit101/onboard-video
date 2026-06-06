@@ -79,7 +79,7 @@ export interface OnboardingVideoProps {
   onPlay?: () => void
   onPause?: () => void
   /** Fired at most every 250ms; argument is clamped to [0, 100]. */
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number, duration: number, currentTime: number) => void
   /** Fires once per playback. */
   onEnded?: () => void
   /** Fired when the user clicks the skip button. Does not fire `onEnded`. */
@@ -97,6 +97,11 @@ export interface OnboardingVideoProps {
    *  - `DraggableConfig` → customize initial corner, width, margin, and snap callback.
    */
   draggable?: boolean | DraggableConfig
+  /**
+   * Enable minimalist play/pause and progress timeline controls that appear when
+   * hovering over the video.
+   */
+  controls?: boolean
 }
 
 /** Options consumed by the headless `useOnboardingVideo` hook. */
@@ -108,7 +113,7 @@ export interface UseOnboardingVideoOptions {
   onReady?: () => void
   onPlay?: () => void
   onPause?: () => void
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number, duration: number, currentTime: number) => void
   onEnded?: () => void
 }
 

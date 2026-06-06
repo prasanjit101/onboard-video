@@ -107,12 +107,18 @@ export const youtubeProvider: VideoProvider = {
       ended: new Set(),
       error: new Set(),
     }
-    const progressListeners: Set<(p: number) => void> = new Set()
+    const progressListeners: Set<
+      (percent: number, duration: number, currentTime: number) => void
+    > = new Set()
     const emit = (event: ProviderEvent) => {
       for (const cb of listeners[event]) cb()
     }
-    const emitProgress = (percent: number) => {
-      for (const cb of progressListeners) cb(percent)
+    const emitProgress = (
+      percent: number,
+      duration: number,
+      currentTime: number,
+    ) => {
+      for (const cb of progressListeners) cb(percent, duration, currentTime)
     }
 
     let player: YouTubePlayer | null = null
@@ -135,7 +141,9 @@ export const youtubeProvider: VideoProvider = {
       progressTimer = setInterval(() => {
         if (!player) return
         try {
-          emitProgress(computePercent(player.getCurrentTime(), player.getDuration()))
+          const duration = player.getDuration() || 0
+          const currentTime = player.getCurrentTime() || 0
+          emitProgress(computePercent(currentTime, duration), duration, currentTime)
         } catch {
           /* player not ready yet */
         }

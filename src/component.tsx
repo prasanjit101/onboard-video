@@ -33,7 +33,12 @@ export function OnboardingVideo(props: OnboardingVideoProps): JSX.Element {
     style,
     aspectRatio = '16/9',
     draggable,
+    controls: controlsProp,
   } = props
+
+  // Track duration and currentTime for the interactive seeker bar
+  const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
 
   // Inject scoped styles once on first mount. Safe on the server (no-ops).
   useEffect(() => {
@@ -63,15 +68,40 @@ export function OnboardingVideo(props: OnboardingVideoProps): JSX.Element {
       onPlay?.()
     },
     onPause,
-    onProgress: (percent) => {
+    onProgress: (percent, dur, curr) => {
       // Track elapsed time alongside delegating to the consumer's callback.
       if (playStartRef.current != null) {
         setElapsedSec((Date.now() - playStartRef.current) / 1000)
       }
-      onProgress?.(percent)
+      setDuration(dur)
+      setCurrentTime(curr)
+      onProgress?.(percent, dur, curr)
     },
     onEnded,
   })
+
+  const handleCenterClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (state === 'playing') {
+      controls.pause()
+    } else if (state === 'paused') {
+      controls.play()
+    } else if (state === 'ended') {
+      controls.replay()
+    }
+  }
+
+  const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const percent = clickX / rect.width
+    if (duration > 0) {
+      const targetTime = percent * duration
+      controls.seek(targetTime)
+      setCurrentTime(targetTime)
+    }
+  }
 
   // Resolve the `draggable` prop into a normalized config (or null when off).
   // Memoized so the drag hook below sees a stable identity between renders.
@@ -214,6 +244,33 @@ export function OnboardingVideo(props: OnboardingVideoProps): JSX.Element {
             >
               Skip
             </button>
+          )}
+
+          {controlsProp && (state === 'playing' || state === 'paused' || state === 'ended') && (
+            <>
+              <button
+                type="button"
+                className="ov-play-pause-btn"
+                onClick={handleCenterClick}
+                aria-label={state === 'playing' ? 'Pause video' : state === 'ended' ? 'Replay video' : 'Play video'}
+              >
+                {state === 'playing' ? '⏸' : state === 'ended' ? '↺' : '▶'}
+              </button>
+              <div
+                className="ov-control-bar"
+                onClick={handleSeekClick}
+                role="slider"
+                aria-valuenow={duration > 0 ? (currentTime / duration) * 100 : 0}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Seek timeline"
+              >
+                <div
+                  className="ov-control-progress"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
+            </>
           )}
         </>
       )}

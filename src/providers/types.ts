@@ -22,7 +22,9 @@ export interface ProviderHandle {
   /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
   on(event: ProviderEvent, cb: () => void): () => void
   /** Subscribe to progress updates. Returns an unsubscribe function. */
-  onProgress(cb: (percent: number) => void): () => void
+  onProgress(
+    cb: (percent: number, duration: number, currentTime: number) => void,
+  ): () => void
 }
 
 export interface VideoProvider {

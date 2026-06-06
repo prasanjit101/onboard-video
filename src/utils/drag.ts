@@ -97,11 +97,6 @@ export function useDraggableFloating(
     const onDown = (e: PointerEvent) => {
       // Mouse: primary button only. Touch/pen always counts.
       if (e.pointerType === 'mouse' && e.button !== 0) return
-      try {
-        handle.setPointerCapture(e.pointerId)
-      } catch {
-        /* test environments may not implement capture */
-      }
       ctx.active = true
       ctx.startPX = e.clientX
       ctx.startPY = e.clientY
@@ -109,6 +104,10 @@ export function useDraggableFloating(
       ctx.startY = positionRef.current.y
       setDragging(true)
       e.preventDefault()
+
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
     }
 
     const onMove = (e: PointerEvent) => {
@@ -124,14 +123,14 @@ export function useDraggableFloating(
       setPosition({ x, y })
     }
 
-    const onUp = (e: PointerEvent) => {
+    const onUp = () => {
       if (!ctx.active) return
       ctx.active = false
-      try {
-        handle.releasePointerCapture(e.pointerId)
-      } catch {
-        /* not always supported */
-      }
+
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+
       const root = rootRef.current
       if (!root) {
         setDragging(false)
@@ -152,14 +151,11 @@ export function useDraggableFloating(
     }
 
     handle.addEventListener('pointerdown', onDown)
-    handle.addEventListener('pointermove', onMove)
-    handle.addEventListener('pointerup', onUp)
-    handle.addEventListener('pointercancel', onUp)
     return () => {
       handle.removeEventListener('pointerdown', onDown)
-      handle.removeEventListener('pointermove', onMove)
-      handle.removeEventListener('pointerup', onUp)
-      handle.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
     }
   }, [enabled])
 

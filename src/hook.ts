@@ -30,6 +30,7 @@ type Action =
   | { type: 'replay' }
   | { type: 'error'; error: Error }
   | { type: 'reset' }
+  | { type: 'seek' }
 
 function reducer(state: InternalState, action: Action): InternalState {
   switch (action.type) {
@@ -57,6 +58,11 @@ function reducer(state: InternalState, action: Action): InternalState {
       return { ...state, state: 'error', error: action.error }
     case 'reset':
       return { state: 'idle', error: null, endedFired: false }
+    case 'seek':
+      if (state.state === 'ended') {
+        return { ...state, state: 'paused' }
+      }
+      return state
   }
 }
 
@@ -118,9 +124,12 @@ export function useOnboardingVideo(
     dispatch({ type: 'loading' })
 
     endedFiredRef.current = false
-    const throttledProgress = throttle((percent: number) => {
-      callbacksRef.current.onProgress?.(percent)
-    }, 250)
+    const throttledProgress = throttle(
+      (percent: number, duration: number, currentTime: number) => {
+        callbacksRef.current.onProgress?.(percent, duration, currentTime)
+      },
+      250,
+    )
 
     let unsubs: Array<() => void> = []
 
@@ -199,6 +208,7 @@ export function useOnboardingVideo(
   }, [])
   const seek = useCallback((seconds: number) => {
     handleRef.current?.seek(seconds)
+    dispatch({ type: 'seek' })
   }, [])
   const replay = useCallback(() => {
     const handle = handleRef.current

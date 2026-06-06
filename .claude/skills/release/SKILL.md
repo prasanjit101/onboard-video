@@ -105,9 +105,11 @@ To ship:
 2. Merge it.
 3. The same workflow detects the merged version bump, runs `bun install && bun test && bun run build`, then runs `changeset publish` — which calls `npm publish` for the new version and pushes a git tag `v<x.y.z>`.
 
+**Pushes with nothing to release are a harmless no-op.** If `main` has zero queued changesets *and* `package.json`'s version is already on npm (e.g. you just published manually from your laptop and then pushed the version-bump commit), the action runs, finds nothing to do, and exits green. No Version PR opens; no republish. Don't second-guess an empty successful run — that's the expected state between releases.
+
 If the publish step is failing, check:
 - `NPM_TOKEN` secret is present in repo settings (Automation token from npmjs.com).
-- 2FA: Automation tokens bypass 2FA, but Publish tokens don't. If you're seeing OTP prompts in CI, the secret is the wrong token type.
+- 2FA: Automation tokens bypass 2FA, but Publish tokens don't. If you're seeing OTP prompts in CI, the secret is the wrong token type. The same applies locally — `bun run release` from a laptop with a Publish-token-enabled account will prompt for OTP; pass `--otp=<code>` via `npm publish --tag beta --otp=…` or switch to an Automation token.
 - The version in `package.json` isn't already published to npm (`npm view onboard-video versions`).
 
 ---
@@ -163,7 +165,13 @@ bun run release
 bunx changeset pre exit
 ```
 
-Consumers opt in with `npm install onboard-video@beta`. The `latest` tag is untouched.
+Consumers opt in with `npm install onboard-video@beta`. The `latest` tag is untouched — **except on the very first publish of the package**.
+
+> **First-publish dist-tag gotcha.** npm always seeds a `latest` tag on a brand-new package, even when you pass `--tag beta`. So if `0.2.0-beta.0` is the *first ever* version published, `latest` and `beta` will both point at it, and a bare `npm install onboard-video` will pull the beta. Two ways to recover:
+> - **Preferred:** publish a stable version next (`bunx changeset pre exit` → `bun run version` → `bun run release`). That stable version takes over `latest`, and `@beta` becomes opt-in as intended.
+> - **Quick fix:** point `latest` at a different existing version with `npm dist-tag add onboard-video@<stable> latest`. (There's no "remove latest" — npm requires the tag to exist.)
+>
+> Every subsequent publish respects `--tag` normally; the gotcha only fires on the package's first-ever version.
 
 While in pre-release mode, all subsequent `bun run version` calls bump the pre-release counter (`-beta.0` → `-beta.1`) until you exit.
 

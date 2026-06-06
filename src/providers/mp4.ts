@@ -40,13 +40,19 @@ export function mountMp4Video(
     ended: new Set(),
     error: new Set(),
   }
-  const progressListeners: Set<(p: number) => void> = new Set()
+  const progressListeners: Set<
+    (percent: number, duration: number, currentTime: number) => void
+  > = new Set()
 
   const emit = (event: ProviderEvent) => {
     for (const cb of listeners[event]) cb()
   }
-  const emitProgress = (percent: number) => {
-    for (const cb of progressListeners) cb(percent)
+  const emitProgress = (
+    percent: number,
+    duration: number,
+    currentTime: number,
+  ) => {
+    for (const cb of progressListeners) cb(percent, duration, currentTime)
   }
 
   const onLoaded = () => emit('ready')
@@ -55,7 +61,9 @@ export function mountMp4Video(
   const onEnded = () => emit('ended')
   const onError = () => emit('error')
   const onTimeUpdate = () => {
-    emitProgress(computePercent(video.currentTime, video.duration))
+    const duration = video.duration || 0
+    const currentTime = video.currentTime || 0
+    emitProgress(computePercent(currentTime, duration), duration, currentTime)
   }
 
   video.addEventListener('loadedmetadata', onLoaded)
