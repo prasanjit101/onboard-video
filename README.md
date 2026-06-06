@@ -5,6 +5,8 @@
 
 A tiny React library for embedding onboarding videos from **Cloudinary**, **YouTube** (via `lite-youtube-embed`), or **plain MP4** behind one consistent API.
 
+![onboard-video screenshot](./assets/ss.png)
+
 - **Core bundle: ~5 KB gzipped** (includes draggable/floating mode). YouTube provider loads on demand.
 - **Onboarding-shaped API:** `onEnded`, `onSkip`, `allowSkipAfter`, plus an opt-in `useVideoWatchState` hook.
 - **Provider-agnostic.** Adding Vimeo, Mux, or Wistia is a single new file.
@@ -218,6 +220,20 @@ The persistence hook is **not** auto-wired into `<OnboardingVideo />` — you de
 - **`allowSkipAfter`** semantics: `undefined` → no button; `0` → immediately visible; `n` → after `n` seconds of playback; `null` → always visible.
 - **YouTube** renders a `lite-youtube` placeholder; clicking play upgrades to the real IFrame Player API so `onEnded` is reliable. Only the placeholder loads on initial render.
 - **SSR-safe.** Importing in a server component never throws; nothing renders until mount.
+
+## Interactive Playground
+
+This repository contains an interactive Vite-based playground where you can test all providers (MP4, YouTube, Cloudinary), try the floating draggable/snapping behavior, monitor the live event stream, and check persistence/headless behaviors in real-time.
+
+To run the playground locally:
+
+```sh
+cd playground
+bun install
+bun run dev
+```
+
+Open `http://localhost:5173` in your browser to run the demo app.
 
 ## Browser support
 
