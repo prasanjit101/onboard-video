@@ -239,6 +239,15 @@ Open `http://localhost:5173` in your browser to run the demo app.
 
 Modern evergreen browsers. iOS Safari requires `playsinline` (always set). No IE support.
 
+## Author & Journey
+
+I built `onboard-video` because I figured there was a lack of clean, polished solutions to implement good UX onboarding videos for apps. I wanted something lightweight, customizable, and consistent across different hosting providers.
+
+If you find this useful or want to follow along with my journey, let's connect on X (Twitter):
+
+👉 **[Follow @jit_infinity on X](https://x.com/jit_infinity)**
+
 ## License
 
 MIT
+
